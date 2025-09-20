@@ -1,4 +1,4 @@
-function pre_ainstall($validator) {
+function pre_binstall($validator) {
     $result = @{
         Eventlog = @{
             Start  = ""
@@ -19,11 +19,9 @@ function pre_ainstall($validator) {
     Import-Module "$($config.folders.modules)\EventlogRecording.psm1" -Force
 
     # breits installiert ?
-    
     try{
-        $codedir=(Get-ItemProperty HKLM:\SOFTWARE\GBS\iQ.Suite\General\ -ErrorAction Stop).code    
-        get-item "$codedir\bin\gtadmin.exe" -ErrorAction Stop
-        $result.Setup.installed="gtadmin found"
+        get-item "C:\Program Files\GBS\iQ.Suite WebClient\webapp\bin\De.Group.Msx.Frontend.WebClient.dll" -ErrorAction Stop
+        $result.Setup.installed="De.Group.Msx.Frontend.WebClient.dll"
         return $result
     }catch{
         $result.Setup.installed=0
@@ -32,55 +30,10 @@ function pre_ainstall($validator) {
     # start Eventlog Recording
     $result.Eventlog = Start-EventlogRecording
 
-    # --- Services stoppen/deaktivieren ---
-    # MSExchangeTransport (falls vorhanden)
-    try {
-        $svc = Get-Service -Name 'MSExchangeTransport' -ErrorAction SilentlyContinue
-        if ($null -ne $svc) {
-            try {
-                if ($svc.Status -ne 'Stopped') {
-                    Stop-Service -Name $svc.Name -Force -ErrorAction Stop
-                }
-            } catch {
-                Write-LogWarning "$($result.setup.function): Konnte Dienst '$($svc.Name)' nicht stoppen: $($_.Exception.Message)"
-            }
-            try {
-                Set-Service -Name $svc.Name -StartupType Disabled -ErrorAction Stop
-            } catch {
-                Write-LogWarning "$($result.setup.function): Konnte Starttyp für '$($svc.Name)' nicht auf Disabled setzen: $($_.Exception.Message)"
-            }
-        }
-    } catch {
-        Write-LogWarning "$($result.setup.function): Abfrage von 'MSExchangeTransport' fehlgeschlagen: $($_.Exception.Message)"
-    }
-
-    # Alle iqsuite* Dienste (falls vorhanden)
-        try {
-            $iqSvcs = Get-Service -Name 'iqsuite*' -ErrorAction SilentlyContinue
-            foreach ($s in $iqSvcs) {
-                try {
-                    if ($s.Status -ne 'Stopped') {
-                        Stop-Service -Name $s.Name -Force -ErrorAction Stop
-                    }
-                } catch {
-                    Write-Warning "$($result.setup.function): Konnte Dienst '$($s.Name)' nicht stoppen: $($_.Exception.Message)"
-                }
-                try {
-                    Set-Service -Name $s.Name -StartupType Disabled -ErrorAction Stop
-                } catch {
-                    Write-Warning "$($result.setup.function): Konnte Starttyp für '$($s.Name)' nicht auf Disabled setzen: $($_.Exception.Message)"
-                }
-            }
-        } catch {
-            Write-Warning "$($result.setup.function): Abfrage der iqsuite* Dienste fehlgeschlagen: $($_.Exception.Message)"
-        }
-
     # --- Setup vorbereiten ---
-        $result.setup.exe       = Join-Path -Path $config.folders.testcases -ChildPath '_sources\setup_BE.exe'
+        $result.setup.exe       = Join-Path -Path $config.folders.testcases -ChildPath '_sources\setup_FE.exe'
         $result.Setup.logFile   = Join-Path -Path $config.folders.log -ChildPath "$($result.setup.function)_setup.log"
-        $result.setup.arguments = ('/s /v"/qn GRP_FLAG_FORCE_PS=1 /L*v ""{0}"""' -f $result.Setup.logFile)
-        # Optional (InstallShield): /SMS hinzufügen, damit der Wrapper auf msiexec wartet
-        # $result.setup.arguments = ('/s /SMS /v"/qn GRP_FLAG_FORCE_PS=1 /L*v ""{0}"""' -f $result.Setup.logFile)
+        $result.setup.arguments = $result.setup.arguments = ('/s /v"/qn GRP_SITE_WEBSITE=1 GRP_SITE_DEFAULT_APPNAME=webclient /L*v \"{0}\""' -f $result.Setup.logFile)
 
     # Setup starten
         if (-not (Test-Path -LiteralPath $result.setup.exe)) {
@@ -122,9 +75,8 @@ function pre_ainstall($validator) {
                 $result.Setup.result = "Timeout ($([int]($timeoutMs/1000)) s): Installer-Prozesse laufen noch."
                 return $result
             }
-
-        Start-Sleep -Seconds 2
-    }
+            Start-Sleep -Seconds 2
+        }
 
     # ExitCode (vom Wrapper; kann $null sein, wenn er schon beendet war)
         try { $result.Setup.exitcode = $result.setup.proc.ExitCode } catch { $result.Setup.exitcode = $null }

@@ -72,7 +72,6 @@ foreach($module in Get-ChildItem -Path $global:config.folders.modules -Filter '*
 write-logInfo "Modules loaded from $($global:config.folders.modules)"
 
 #create workdir if not exists
-
 New-FoldersIfMissing -Path "$($global:config.folders.log)"  -ForceRemove 
 
 
@@ -82,7 +81,33 @@ $config.log.filename = Join-Path -Path $global:config.folders.log -ChildPath "Bu
 Write-LogVerbose "Log file will be written to $($config.log.filename)"
 
 # pre test
-invoke-pester "$($config.folders.testcases)\pre_ainstall\pre_ainstall.tests.ps1"
+#TODO: add exclude AV rule 
+write-logInfo "Disable AV Scanner for GTFR and iQSuite"
+Add-MpPreference -ExclusionPath "C:\GTFR"
+Add-MpPreference -ExclusionPath "C:\Program Files\GBS\iQ.Suite"
+
+#TODO: require pester 5
+
+#alle tests mit PRE (rekursive)
+invoke-pester -config = @{
+    Run = @{
+        Path = $config.folders.testcases      # Testcases-Ordner (rekursiv ist Default in v5)
+    }
+    Filter = @{
+        Tag = @('PRE')                         # Nur PRE-Tests ausführen (ODER-Logik bei mehreren)
+    }
+    Output = @{
+        Verbosity = 'Detailed'                 # Ausführliche Konsolen-Ausgabe
+    }
+    TestResult = @{
+        Enabled      = $true
+        OutputFormat = 'NUnitXml'              # NUnit-kompatibles XML
+        OutputPath   = (Join-Path $global:config.folders.log 'pre-step.xml')
+    }
+}
+ 
+
+invoke-pester "$($config.folders.testcases)" -Output Detailed -TagFilter @("PRE") 
 
 $global:ProgressPreference    = 'Continue'
 $global:VerbosePreference     = 'Continue'
