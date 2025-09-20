@@ -29,6 +29,7 @@ $global:config = [PSCustomObject]@{
         modules = Join-Path -Path $root -ChildPath '_ps\_modules'
         log     = Join-Path -Path $root -ChildPath '\log'
         testcases = Join-Path -Path $root -ChildPath '\testcases'
+        reports  = Join-Path -Path $root -ChildPath '\reports'
     }
     tools= [PSCustomObject]@{
         sevenZip = Join-Path -Path $root -ChildPath '_ps\_tools\7-Zip\7z.exe'
@@ -109,16 +110,19 @@ $pesterConfig = @{
     TestResult = @{
         Enabled      = $true
         OutputFormat = 'NUnitXml'
-        OutputPath   = (Join-Path $global:config.folders.log 'pre-step.xml')
+        OutputPath   = (Join-Path $global:config.folders.reports 'tag-pre.xml')
     }
 }
-$preStep = Invoke-Pester -Configuration $pesterConfig -PassThru
+$preStep = Invoke-Pester -Configuration $pesterConfig
 
 if ($preStep.FailedCount -gt 0) {
     Write-logError "Es sind $($preStep.FailedCount) Tests fehlgeschlagen."
 } else {
     write-logSuccess "Alle Tests erfolgreich."
 }
+
+#Merge-NUnitResults -SourceFolder $config.folders.reports -Pattern 'tag-*.xml' -OutputFile "$($config.folders.reports)\ccreport.xml"
+#&$config.tools.extent -d $config.folders.reports -o $config.folders.reports --merge 
 
 
 ## ENDE
