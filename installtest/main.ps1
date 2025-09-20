@@ -100,7 +100,10 @@ try{
 
 #alle tests mit PRE (rekursive)
 $pesterConfig = @{
-    Run = @{ Path = $config.folders.testcases }
+    Run = @{ 
+        Path = $config.folders.testcases 
+        PassThru=$true
+    }
     Filter = @{ Tag = @('PRE') }
     Output = @{ Verbosity = 'Detailed' }
     TestResult = @{
@@ -109,7 +112,7 @@ $pesterConfig = @{
         OutputPath   = (Join-Path $global:config.folders.log 'pre-step.xml')
     }
 }
-$preStep = Invoke-Pester -Configuration $pesterConfig
+$preStep = Invoke-Pester -Configuration $pesterConfig -PassThru
 
 if ($preStep.FailedCount -gt 0) {
     Write-logError "Es sind $($preStep.FailedCount) Tests fehlgeschlagen."
