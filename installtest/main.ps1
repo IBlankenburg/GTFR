@@ -81,34 +81,44 @@ $config.log.filename = Join-Path -Path $global:config.folders.log -ChildPath "Bu
 Write-LogVerbose "Log file will be written to $($config.log.filename)"
 
 # pre test
-#TODO: add exclude AV rule 
+
+#add exclude AV rule 
 write-logInfo "Disable AV Scanner for GTFR and iQSuite"
 Add-MpPreference -ExclusionPath "C:\GTFR"
 Add-MpPreference -ExclusionPath "C:\Program Files\GBS\iQ.Suite"
 
-#TODO: require pester 5
+
+try{
+    if((get-module pester).version.Major -lt 5){
+        write-logError "Pester v5 not found"
+    }
+}catch{
+    Write-LogWarning "Pester v5 not found"
+    write-logError $_
+}
+
 
 #alle tests mit PRE (rekursive)
-invoke-pester -config = @{
-    Run = @{
-        Path = $config.folders.testcases      # Testcases-Ordner (rekursiv ist Default in v5)
-    }
-    Filter = @{
-        Tag = @('PRE')                         # Nur PRE-Tests ausführen (ODER-Logik bei mehreren)
-    }
-    Output = @{
-        Verbosity = 'Detailed'                 # Ausführliche Konsolen-Ausgabe
-    }
+$pesterConfig = @{
+    Run = @{ Path = $config.folders.testcases }
+    Filter = @{ Tag = @('PRE') }
+    Output = @{ Verbosity = 'Detailed' }
     TestResult = @{
         Enabled      = $true
-        OutputFormat = 'NUnitXml'              # NUnit-kompatibles XML
+        OutputFormat = 'NUnitXml'
         OutputPath   = (Join-Path $global:config.folders.log 'pre-step.xml')
     }
 }
- 
+$preStep = Invoke-Pester -Configuration $pesterConfig
 
-invoke-pester "$($config.folders.testcases)" -Output Detailed -TagFilter @("PRE") 
+if ($preStep.FailedCount -gt 0) {
+    Write-logError "Es sind $($preStep.FailedCount) Tests fehlgeschlagen."
+} else {
+    write-logSuccess "Alle Tests erfolgreich."
+}
 
+
+## ENDE
 $global:ProgressPreference    = 'Continue'
 $global:VerbosePreference     = 'Continue'
 $global:InformationPreference = 'Continue'

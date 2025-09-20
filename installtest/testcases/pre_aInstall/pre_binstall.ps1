@@ -65,10 +65,9 @@ function pre_binstall($validator) {
         $deadline  = (Get-Date).AddMilliseconds($timeoutMs)
 
         while ($true) {
-            $msi   = Get-Process -Name 'msiexec' -ErrorAction SilentlyContinue
-            $setup = Get-Process -Name 'setup*'  -ErrorAction SilentlyContinue
+            $setup = Get-Process -Name 'setup_*'  -ErrorAction SilentlyContinue
 
-            if (-not $msi -and -not $setup) { break }   # nichts mehr aktiv → fertig
+            if (-not $setup) { break }   # nichts mehr aktiv → fertig
 
             if ((Get-Date) -ge $deadline) {
                 try { $msi, $setup | Where-Object { $_ } | Stop-Process -Force -ErrorAction SilentlyContinue } catch {}

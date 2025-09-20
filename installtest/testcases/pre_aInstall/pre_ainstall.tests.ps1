@@ -7,45 +7,39 @@ BeforeAll {
     )
     $result = pre_ainstall -validator $validate
     # Normalisierte Flag-Variable: installiert == '0' ?
-    $script:SetupInstalledIsZero = ([string]$result.Setup.installed -eq '0')
+    $SetupInstalledIsZero = ([string]$result.Setup.installed -eq '0')
+
+    ## Save $result as xml/json
+    $outFile = Join-Path $global:config.folders.log "pre_binstall_result" # change name
+    write-logInfo "Result gespeichert in $outFile"
+    $result | Export-Clixml -Path "$($outFile).cliXML"
+    $result | ConvertTo-Json | Out-File -FilePath "$($outFile).json" -Encoding UTF8
+
 }
 
 Describe "pre_ainstall" -Tag @('all','Systemtest','PRE') {
     #TODO: wass passiert wenn Setup Exe nicht vorhanden ?
     Context "Setup Check"{
-        it "iQ.Suite was already installed" {$result.Setup.installed | Should -Be 0 }
-    }
-    Context "Setup" -Skip:($result.Setup.installed -ne 0) {
-
-        It "Setup finished without failure" {$result.Setup.result    | Should -be $true}
-        It "ExitCode is 0"                  {$result.Setup.exitcode  | Should -Be 0 }
+        It "iQ.Suite was already installed" { $result.Setup.installed | Should -Be 0 }
     }
 
-    Context "Eventlog" -Skip:($result.Setup.installed -ne 0) {
-        It "End is set"                     {$result.Eventlog.End | Should -Not -BeNullOrEmpty}
-        It "Start <= End"                   {[int64]$result.Eventlog.Start | Should -BeLessOrEqual ([int64]$result.Eventlog.End)}
-        It "EMH is running" -Skip:(-not ($result.Eventlog.Entrys -is [System.Array])) {
-            ($result.Eventlog.Entrys | Where-Object {$_.Id -eq 49 -and ($_.ProviderName -ieq 'iQSuite' -or $_.Source -ieq 'iQSuite')}) | Should -Not -BeNullOrEmpty
-        }
-        It "On Access Virusscanner is active" -Skip:(-not ($result.Eventlog.Entrys -is [System.Array])) {
-            ($result.Eventlog.Entrys | Where-Object { $_.Id -eq 185 -and ($_.ProviderName -ieq 'iQSuite' -or $_.Source -ieq 'iQSuite') }) | Should -BeNullOrEmpty
-        }
+    Context "Setup" -Skip:(-not $SetupInstalledIsZero) {
+        It "Setup finished without failure" { $result.Setup.result   | Should -Be $true }
+        It "ExitCode is 0"                 { $result.Setup.exitcode | Should -Be 0 }
+    }
+
+    Context "Eventlog" -Skip:(-not $SetupInstalledIsZero) {
+        It "End is set"        { $result.Eventlog.End | Should -Not -BeNullOrEmpty }
+        It "Start <= End"      { [int64]$result.Eventlog.Start | Should -BeLessOrEqual ([int64]$result.Eventlog.End) }
+        It "EMH is running"    { @($result.Eventlog.Entrys | Where-Object {$_.Id -eq 49 -and ($_.ProviderName -ieq 'iQSuite' -or $_.Source -ieq 'iQSuite')}) | Should -Not -BeNullOrEmpty}
+        It "On Access Virusscanner is active" { @($result.Eventlog.Entrys | Where-Object {$_.Id -eq 185 -and ($_.ProviderName -ieq 'iQSuite' -or $_.Source -ieq 'iQSuite')}) | Should -BeNullOrEmpty}
     }
 
     # Optional: Bei Fehlschlag hilfreiche Ausgabe
     AfterAll {
-        #json
-        $outFile = Join-Path $global:config.folders.log 'pre_ainstall_result.json'
-        $result | ConvertTo-Json -Depth 5 | Out-File -FilePath $outFile -Encoding UTF8
-        #xml
-        $outFile = Join-Path $global:config.folders.log 'pre_ainstall_result.clixml'
-        $result | Export-Clixml -Path $outFile
-        ##
-        write-logInfo "Result gespeichert in $outFile"
-
         if ($result.Setup.failed) {
-            Write-logError "iQ.Suite Backend Setup failed: $($result.Setup.failed)"
-        }else{
+            Write-LogError "iQ.Suite Backend Setup failed: $($result.Setup.failed)"
+        } else {
             Write-LogSuccess "iQ.Suite Backend Setup done..."
         }
     }
