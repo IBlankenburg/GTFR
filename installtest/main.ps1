@@ -83,21 +83,18 @@ Write-LogVerbose "Log file will be written to $($config.log.filename)"
 
 # pre test
 
-#add exclude AV rule 
+# add exclude AV rule 
 write-logInfo "Disable AV Scanner for GTFR and iQSuite"
 Add-MpPreference -ExclusionPath "C:\GTFR"
 Add-MpPreference -ExclusionPath "C:\Program Files\GBS\iQ.Suite"
 
-
-try{
-    if((get-module pester).version.Major -lt 5){
-        write-logError "Pester v5 not found"
-    }
-}catch{
-    Write-LogWarning "Pester v5 not found"
-    write-logError $_
+## lade pester module
+if(ensure-ModuleLoaded -name 'Pester' -version '5.7.1' -allowglobber) {
+    write-logInfo "Pester module is available."
+} else {
+    write-logError "Pester module could not be loaded or installed."
+    exit 1
 }
-
 
 #alle tests mit PRE (rekursive)
 $pesterConfig = @{
