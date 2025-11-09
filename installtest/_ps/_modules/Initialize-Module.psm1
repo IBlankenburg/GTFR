@@ -1,4 +1,4 @@
-function Ensure-ModuleLoaded {
+function Initialize-Module {
     param(
         [Parameter(Mandatory = $true)][string]$name,
         [string]$version = '',

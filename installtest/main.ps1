@@ -89,7 +89,7 @@ Add-MpPreference -ExclusionPath "C:\GTFR"
 Add-MpPreference -ExclusionPath "C:\Program Files\GBS\iQ.Suite"
 
 ## lade pester module
-if(ensure-ModuleLoaded -name 'Pester' -version '5.7.1' -allowglobber) {
+if(Initialize-Module -name 'Pester' -version '5.7.1' -allowglobber) {
     write-logInfo "Pester module is available."
 } else {
     write-logError "Pester module could not be loaded or installed."
