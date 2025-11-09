@@ -82,7 +82,7 @@ function pre_ainstall($validator) {
         # Optional (InstallShield): /SMS hinzufügen, damit der Wrapper auf msiexec wartet
         # $result.setup.arguments = ('/s /SMS /v"/qn GRP_FLAG_FORCE_PS=1 /L*v ""{0}"""' -f $result.Setup.logFile)
 
-    # Setup starten
+    # Setup exe vorhanden ?
         if (-not (Test-Path -LiteralPath $result.setup.exe)) {
             $result.Setup.result = "setup not found [$($result.setup.exe)]"
             write-logError "$($result.setup.function): $($result.Setup.result)"
